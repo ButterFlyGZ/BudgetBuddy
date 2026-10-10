@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics | BudgetBuddy</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-800">
+  <!-- Navbar -->
+  <header class="bg-white shadow-sm sticky top-0 z-50">
+    <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+      <div class="flex items-center gap-2">
+        <img src="assets/logo.png" alt="Logo" class="w-8 h-8">
+        <h1 class="font-bold text-xl text-blue-500">BudgetBuddy</h1>
+      </div>
+      <nav class="flex gap-6 text-gray-600 font-medium">
+        <a href="index.html" class="hover:text-blue-500">Dashboard</a>
+        <a href="transactions.html" class="hover:text-blue-500">Transactions</a>
+        <a href="analytics.html" class="text-blue-500">Analytics</a>
+        <a href="settings.html" class="hover:text-blue-500">Settings</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-6 py-10">
+    <h2 class="text-2xl font-bold mb-6">Analytics</h2>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div class="bg-white rounded-2xl p-6 shadow">
+        <h3 class="font-semibold mb-3">Spending by Type</h3>
+        <canvas id="pieChart" height="200"></canvas>
+      </div>
+      <div class="bg-white rounded-2xl p-6 shadow">
+        <h3 class="font-semibold mb-3">Expense Trend</h3>
+        <canvas id="lineChart" height="200"></canvas>
+      </div>
+    </div>
+  </main>
+
+  <footer class="text-center py-6 text-gray-500 border-t mt-8">
+    © 2025 BudgetBuddy
+  </footer>
+
+  <script>
+    const transactions = JSON.parse(localStorage.getItem("transactions")) || [];
+
+    const income = transactions.filter(t => t.type === "income").reduce((a,b)=>a+b.amount,0);
+    const expense = transactions.filter(t => t.type === "expense").reduce((a,b)=>a+b.amount,0);
+
+    new Chart(document.getElementById('pieChart'), {
+      type: 'pie',
+      data: {
+        labels: ['Income', 'Expense'],
+        datasets: [{
+          data: [income, expense],
+          backgroundColor: ['#a5f3fc', '#fecdd3'],
+          borderWidth: 0
+        }]
+      }
+    });
+
+    const dailyExpense = {};
+    transactions.filter(t=>t.type==='expense').forEach(t=>{
+      dailyExpense[t.date]=(dailyExpense[t.date]||0)+t.amount;
+    });
+
+    new Chart(document.getElementById('lineChart'), {
+      type: 'line',
+      data: {
+        labels: Object.keys(dailyExpense),
+        datasets: [{
+          label: 'Expenses ($)',
+          data: Object.values(dailyExpense),
+          fill: false,
+          borderColor: '#f87171',
+          tension: 0.3
+        }]
+      },
+      options: { scales: { y: { beginAtZero: true } } }
+    });
+  </script>
+</body>
+</html>

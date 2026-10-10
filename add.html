@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Transaction | BudgetBuddy</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <header>
+    <img src="assets/logo.png" alt="BudgetBuddy" class="logo">
+    <nav>
+      <ul class="nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="add.html" class="active">Add</a></li>
+        <li><a href="history.html">History</a></li>
+        <li><a href="stats.html">Stats</a></li>
+        <li><a href="settings.html">Settings</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <section class="form-section">
+      <h2>Add Transaction</h2>
+      <form id="addForm">
+        <input type="text" id="title" placeholder="Description" required>
+        <input type="number" id="amount" placeholder="Amount" step="0.01" required>
+        <select id="type" required>
+          <option value="income">Income</option>
+          <option value="expense">Expense</option>
+        </select>
+        <button type="submit">Add Transaction</button>
+      </form>
+    </section>
+  </main>
+
+  <footer>
+    <p>© 2025 BudgetBuddy</p>
+  </footer>
+
+  <script src="js/storage.js"></script>
+  <script>
+    const form = document.getElementById("addForm");
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const title = document.getElementById("title").value.trim();
+      const amount = parseFloat(document.getElementById("amount").value);
+      const type = document.getElementById("type").value;
+
+      if (!title || isNaN(amount)) {
+        alert("Please enter valid data.");
+        return;
+      }
+
+      const newTransaction = {
+        id: Date.now(),
+        title,
+        amount,
+        type,
+        date: new Date().toISOString().split("T")[0],
+      };
+
+      const transactions = JSON.parse(localStorage.getItem("transactions")) || [];
+      transactions.push(newTransaction);
+      localStorage.setItem("transactions", JSON.stringify(transactions));
+
+      alert("Transaction added successfully!");
+      form.reset();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings | BudgetBuddy</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-800">
+  <header class="bg-white shadow-sm sticky top-0 z-50">
+    <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+      <div class="flex items-center gap-2">
+        <img src="assets/logo.png" alt="Logo" class="w-8 h-8">
+        <h1 class="font-bold text-xl text-blue-500">BudgetBuddy</h1>
+      </div>
+      <nav class="flex gap-6 text-gray-600 font-medium">
+        <a href="index.html" class="hover:text-blue-500">Dashboard</a>
+        <a href="transactions.html" class="hover:text-blue-500">Transactions</a>
+        <a href="analytics.html" class="hover:text-blue-500">Analytics</a>
+        <a href="settings.html" class="text-blue-500">Settings</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-6 py-10">
+    <h2 class="text-2xl font-bold mb-6">Settings</h2>
+
+    <div class="bg-white rounded-2xl p-6 shadow space-y-4">
+      <button id="toggleTheme"
+              class="w-full bg-blue-100 hover:bg-blue-200 text-blue-700 font-medium rounded-lg py-3 transition">
+        Toggle Dark Mode
+      </button>
+
+      <button id="exportData"
+              class="w-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-medium rounded-lg py-3 transition">
+        Export Data (CSV)
+      </button>
+
+      <button id="clearData"
+              class="w-full bg-rose-100 hover:bg-rose-200 text-rose-700 font-medium rounded-lg py-3 transition">
+        Clear All Data
+      </button>
+    </div>
+  </main>
+
+  <footer class="text-center py-6 text-gray-500 border-t mt-8">
+    © 2025 BudgetBuddy
+  </footer>
+
+  <script>
+    const toggleTheme = document.getElementById('toggleTheme');
+    const exportData = document.getElementById('exportData');
+    const clearData = document.getElementById('clearData');
+
+    // Dark mode toggle
+    toggleTheme.addEventListener('click', () => {
+      document.body.classList.toggle('dark');
+      localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+    });
+
+    // Load theme
+    if (localStorage.getItem('theme') === 'dark') {
+      document.body.classList.add('dark');
+    }
+
+    // Export CSV
+    exportData.addEventListener('click', () => {
+      const data = JSON.parse(localStorage.getItem('transactions')) || [];
+      if (!data.length) return alert('No data to export.');
+      const csv = [
+        ['Title', 'Amount', 'Type', 'Date'],
+        ...data.map(t => [t.title, t.amount, t.type, t.date])
+      ].map(row => row.join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'budgetbuddy_data.csv';
+      a.click();
+    });
+
+    // Clear all
+    clearData.addEventListener('click', () => {
+      if (confirm('Are you sure you want to clear all data?')) {
+        localStorage.removeItem('transactions');
+        alert('All data cleared.');
+      }
+    });
+  </script>
+
+  <style>
+    .dark {
+      background-color: #1f2937;
+      color: #e5e7eb;
+    }
+    .dark .bg-white { background-color: #374151; }
+    .dark .text-blue-500 { color: #93c5fd; }
+  </style>
+</body>
+</html>

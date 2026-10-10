@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BudgetBuddy Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+  <header class="bg-white shadow-sm sticky top-0 z-50">
+  <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+    <!-- Logo + App Name -->
+    <a href="index.html" class="flex items-center gap-2 hover:opacity-80 transition">
+      <img src="assets/logo.png" alt="Logo" class="w-8 h-8">
+      <h1 class="font-bold text-xl text-blue-600">BudgetBuddy</h1>
+    </a>
+
+    <!-- Navigation Links -->
+    <nav class="flex gap-6 text-gray-600 font-medium">
+      <a href="index.html" class="hover:text-blue-600">Dashboard</a>
+      <a href="transactions.html" class="hover:text-blue-600">Transactions</a>
+      <a href="analytics.html" class="hover:text-blue-600">Analytics</a>
+      <a href="settings.html" class="hover:text-blue-600">Settings</a>
+    </nav>
+  </div>
+</header>
+
+
+  <!-- Main Content -->
+  <main class="container mx-auto px-6 py-8">
+
+    <h2 class="text-2xl font-bold mb-6">Overview</h2>
+
+    <!-- Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+      <div class="bg-white rounded-2xl p-6 shadow hover:shadow-md transition">
+        <h3 class="text-gray-500">Total Balance</h3>
+        <p id="total-balance" class="text-3xl font-bold text-blue-600 mt-2">$0.00</p>
+      </div>
+      <div class="bg-green-50 rounded-2xl p-6 shadow hover:shadow-md transition">
+        <h3 class="text-gray-500">Total Income</h3>
+        <p id="total-income" class="text-3xl font-bold text-green-600 mt-2">$0.00</p>
+      </div>
+      <div class="bg-red-50 rounded-2xl p-6 shadow hover:shadow-md transition">
+        <h3 class="text-gray-500">Total Expenses</h3>
+        <p id="total-expense" class="text-3xl font-bold text-red-600 mt-2">$0.00</p>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="bg-white rounded-2xl p-6 shadow">
+      <h3 class="text-xl font-semibold mb-4">Monthly Summary</h3>
+      <canvas id="summaryChart" height="100"></canvas>
+    </div>
+  </main>
+
+  <footer class="text-center py-6 text-gray-500 border-t mt-8">
+    © 2025 BudgetBuddy
+  </footer>
+
+  <script src="js/storage.js"></script>
+  <script>
+    const transactions = JSON.parse(localStorage.getItem("transactions")) || [];
+
+    const income = transactions.filter(t => t.type === "income")
+      .reduce((sum, t) => sum + t.amount, 0);
+    const expense = transactions.filter(t => t.type === "expense")
+      .reduce((sum, t) => sum + t.amount, 0);
+    const balance = income - expense;
+
+    document.getElementById("total-income").textContent = `$${income.toFixed(2)}`;
+    document.getElementById("total-expense").textContent = `$${expense.toFixed(2)}`;
+    document.getElementById("total-balance").textContent = `$${balance.toFixed(2)}`;
+
+    new Chart(document.getElementById("summaryChart"), {
+      type: 'bar',
+      data: {
+        labels: ['Income', 'Expense'],
+        datasets: [{
+          label: 'Amount ($)',
+          data: [income, expense],
+          backgroundColor: ['#10b981', '#ef4444']
+        }]
+      },
+      options: { responsive: true, scales: { y: { beginAtZero: true } } }
+    });
+  </script>
+</body>
+</html>

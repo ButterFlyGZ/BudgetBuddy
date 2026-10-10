@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transactions | BudgetBuddy</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-gradient-to-b from-blue-50 to-indigo-50 min-h-screen">
+
+  <!-- Navbar -->
+  <header class="bg-white shadow-sm sticky top-0 z-50">
+    <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+      <a href="index.html" class="flex items-center gap-2 hover:opacity-80 transition">
+        <img src="assets/logo.png" alt="Logo" class="w-8 h-8">
+        <h1 class="font-bold text-xl text-blue-600">BudgetBuddy</h1>
+      </a>
+      <nav class="flex gap-6 text-gray-600 font-medium">
+        <a href="index.html" class="hover:text-blue-600">Dashboard</a>
+        <a href="transactions.html" class="text-blue-600 font-semibold">Transactions</a>
+        <a href="analytics.html" class="hover:text-blue-600">Analytics</a>
+        <a href="settings.html" class="hover:text-blue-600">Settings</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container mx-auto px-6 py-8">
+    <h2 class="text-2xl font-bold mb-6 text-gray-700">Manage Your Transactions</h2>
+
+    <!-- Add Transaction Form -->
+    <div class="bg-white rounded-2xl p-6 shadow mb-8">
+      <h3 class="text-lg font-semibold mb-4 text-gray-600">Add New Transaction</h3>
+      <form id="transactionForm" class="grid md:grid-cols-5 gap-4">
+        <input type="text" id="description" placeholder="Description" required class="border p-3 rounded-lg">
+        <input type="number" id="amount" placeholder="Amount" required class="border p-3 rounded-lg">
+        <select id="type" class="border p-3 rounded-lg">
+          <option value="income">Income</option>
+          <option value="expense">Expense</option>
+        </select>
+        <select id="category" class="border p-3 rounded-lg">
+          <option value="general">General</option>
+          <option value="food">Food</option>
+          <option value="transport">Transport</option>
+          <option value="shopping">Shopping</option>
+          <option value="bills">Bills</option>
+        </select>
+        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg transition">
+          Add Transaction
+        </button>
+      </form>
+    </div>
+
+    <!-- Filters -->
+    <div class="flex flex-wrap gap-4 mb-6 items-center">
+      <input type="text" id="search" placeholder="Search description..." class="border p-3 rounded-lg flex-1">
+      <select id="filterType" class="border p-3 rounded-lg">
+        <option value="all">All</option>
+        <option value="income">Income</option>
+        <option value="expense">Expense</option>
+      </select>
+    </div>
+
+    <!-- Transactions List -->
+    <div id="transactionList" class="grid gap-4">
+      <!-- Transaction cards will appear here -->
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="text-center py-6 text-gray-500 border-t mt-8">
+    © 2025 BudgetBuddy
+  </footer>
+
+  <!-- JS -->
+  <script type="module" src="js/transactions.js"></script>
+</body>
+</html>

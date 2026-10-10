@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Statistics | BudgetBuddy</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <header>
+    <img src="assets/logo.png" alt="BudgetBuddy" class="logo">
+    <nav>
+      <ul class="nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="add.html">Add</a></li>
+        <li><a href="history.html">History</a></li>
+        <li><a href="stats.html" class="active">Stats</a></li>
+        <li><a href="settings.html">Settings</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <h2>Spending Overview</h2>
+    <canvas id="chart"></canvas>
+  </main>
+
+  <footer>
+    <p>© 2025 BudgetBuddy</p>
+  </footer>
+
+  <script src="js/storage.js"></script>
+  <script>
+    const ctx = document.getElementById("chart").getContext("2d");
+    const transactions = JSON.parse(localStorage.getItem("transactions")) || [];
+
+    const expenses = transactions.filter(t => t.type === "expense");
+    const grouped = {};
+
+    expenses.forEach(t => {
+      grouped[t.title] = (grouped[t.title] || 0) + t.amount;
+    });
+
+    const labels = Object.keys(grouped);
+    const data = Object.values(grouped);
+
+    new Chart(ctx, {
+      type: "pie",
+      data: {
+        labels,
+        datasets: [{
+          data,
+          backgroundColor: ["#ff6384", "#36a2eb", "#ffce56", "#4CAF50", "#9966FF"]
+        }]
+      },
+      options: {
+        plugins: {
+          legend: {
+            position: "bottom"
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
