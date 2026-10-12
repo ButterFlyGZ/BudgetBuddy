@@ -4,82 +4,137 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Analytics | BudgetBuddy</title>
-  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body class="bg-gray-50 text-gray-800">
-  <!-- Navbar -->
-  <header class="bg-white shadow-sm sticky top-0 z-50">
-    <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-      <div class="flex items-center gap-2">
-        <img src="assets/logo.png" alt="Logo" class="w-8 h-8">
-        <h1 class="font-bold text-xl text-blue-500">BudgetBuddy</h1>
-      </div>
-      <nav class="flex gap-6 text-gray-600 font-medium">
-        <a href="index.html" class="hover:text-blue-500">Dashboard</a>
-        <a href="transactions.html" class="hover:text-blue-500">Transactions</a>
-        <a href="analytics.html" class="text-blue-500">Analytics</a>
-        <a href="settings.html" class="hover:text-blue-500">Settings</a>
-      </nav>
-    </div>
-  </header>
-
-  <main class="container mx-auto px-6 py-10">
-    <h2 class="text-2xl font-bold mb-6">Analytics</h2>
-
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      <div class="bg-white rounded-2xl p-6 shadow">
-        <h3 class="font-semibold mb-3">Spending by Type</h3>
-        <canvas id="pieChart" height="200"></canvas>
-      </div>
-      <div class="bg-white rounded-2xl p-6 shadow">
-        <h3 class="font-semibold mb-3">Expense Trend</h3>
-        <canvas id="lineChart" height="200"></canvas>
-      </div>
-    </div>
-  </main>
-
-  <footer class="text-center py-6 text-gray-500 border-t mt-8">
-    © 2025 BudgetBuddy
-  </footer>
-
   <script>
-    const transactions = JSON.parse(localStorage.getItem("transactions")) || [];
+      /* pre-paint theme: avoids dark/light flash, global dark mode */
+      try{(function(){var s={theme:"system"};try{s=Object.assign(s,JSON.parse(localStorage.getItem("bb_settings"))||{})}catch(e){}var t=s.theme;if(t==="system"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}document.documentElement.setAttribute("data-theme",t)})()}catch(e){}
+    </script>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-root"></div>
 
-    const income = transactions.filter(t => t.type === "income").reduce((a,b)=>a+b.amount,0);
-    const expense = transactions.filter(t => t.type === "expense").reduce((a,b)=>a+b.amount,0);
+  <div class="main-area">
+    <div class="topbar">
+      <button class="icon-btn" id="menuBtn" title="Show / hide sidebar">☰</button>
+      <div>
+        <h2>Analytics</h2>
+        <div class="sub">YearGroupedByMonth · click to drill down</div>
+      </div>
+      <div class="actions">
+        <select id="yearPicker"></select>
+      </div>
+    </div>
 
-    new Chart(document.getElementById('pieChart'), {
+    <div class="content">
+      <div class="grid-2">
+        <div class="panel">
+          <h3>Spending by Type (<span id="yearLabel1"></span>)</h3>
+          <p class="hint">Income vs expenses for the selected year.</p>
+          <canvas id="pieChart" height="200"></canvas>
+        </div>
+        <div class="panel">
+          <h3>Income vs Expenses per Month</h3>
+          <p class="hint">Click a bar to open that month.</p>
+          <canvas id="yearlyChart" height="200"></canvas>
+        </div>
+        <div class="panel">
+          <h3>Cumulative Balance</h3>
+          <p class="hint">Running total across the year.</p>
+          <canvas id="cumulativeChart" height="200"></canvas>
+        </div>
+        <div class="panel">
+          <h3>Expense Trend (daily)</h3>
+          <p class="hint">Daily expenses in the selected year.</p>
+          <canvas id="lineChart" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <footer>© 2025 BudgetBuddy</footer>
+  </div>
+</div>
+
+<script src="js/monthly.js"></script>
+<script src="js/layout.js"></script>
+<script>
+  const BB = window.BudgetBuddy;
+  const yearPicker = document.getElementById("yearPicker");
+  let pieChart, yearlyChart, cumulativeChart, lineChart;
+
+  function render() {
+    const year = yearPicker.value;
+    document.getElementById("yearLabel1").textContent = year;
+    const all = BB.loadTransactions();
+    const list = BB.filterByYear(all, year);
+    const t = BB.totals(list);
+    const s = BB.yearlySeries(all, year);
+
+    if (pieChart) pieChart.destroy();
+    pieChart = new Chart(document.getElementById('pieChart'), {
       type: 'pie',
       data: {
         labels: ['Income', 'Expense'],
-        datasets: [{
-          data: [income, expense],
-          backgroundColor: ['#a5f3fc', '#fecdd3'],
-          borderWidth: 0
-        }]
+        datasets: [{ data: [t.income, t.expense], backgroundColor: ['#a5f3fc', '#fecdd3'], borderWidth: 0 }]
+      }
+    });
+
+    if (yearlyChart) yearlyChart.destroy();
+    yearlyChart = new Chart(document.getElementById('yearlyChart'), {
+      type: 'bar',
+      data: {
+        labels: s.labels,
+        datasets: [
+          { label: 'Income', data: s.income, backgroundColor: '#10b981', borderRadius: 5 },
+          { label: 'Expenses', data: s.expense, backgroundColor: '#ef4444', borderRadius: 5 }
+        ]
+      },
+      options: {
+        scales: { y: { beginAtZero: true } },
+        onClick: (e, els) => {
+          if (els.length) {
+            const i = els[0].index;
+            location.href = `monthly.html?month=${year}-${String(i + 1).padStart(2, "0")}`;
+          }
+        }
+      }
+    });
+
+    if (cumulativeChart) cumulativeChart.destroy();
+    cumulativeChart = new Chart(document.getElementById('cumulativeChart'), {
+      type: 'line',
+      data: {
+        labels: s.labels,
+        datasets: [{ label: 'Cumulative balance ($)', data: s.cumulative, borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.15)', fill: true, tension: 0.3 }]
       }
     });
 
     const dailyExpense = {};
-    transactions.filter(t=>t.type==='expense').forEach(t=>{
-      dailyExpense[t.date]=(dailyExpense[t.date]||0)+t.amount;
-    });
+    list.filter(x => x.type === 'expense').forEach(x => { dailyExpense[x.date] = (dailyExpense[x.date] || 0) + x.amount; });
+    const days = Object.keys(dailyExpense).sort();
 
-    new Chart(document.getElementById('lineChart'), {
+    if (lineChart) lineChart.destroy();
+    lineChart = new Chart(document.getElementById('lineChart'), {
       type: 'line',
       data: {
-        labels: Object.keys(dailyExpense),
-        datasets: [{
-          label: 'Expenses ($)',
-          data: Object.values(dailyExpense),
-          fill: false,
-          borderColor: '#f87171',
-          tension: 0.3
-        }]
+        labels: days,
+        datasets: [{ label: 'Expenses ($)', data: days.map(d => dailyExpense[d]), fill: false, borderColor: '#f87171', tension: 0.3 }]
       },
       options: { scales: { y: { beginAtZero: true } } }
     });
-  </script>
+  }
+
+  (function init() {
+    const all = BB.loadTransactions();
+    const years = BB.availableYears(all);
+    yearPicker.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join("");
+    yearPicker.value = String(new Date().getFullYear());
+    if (!years.includes(yearPicker.value)) yearPicker.value = years[0];
+    render();
+  })();
+
+  yearPicker.addEventListener("change", render);
+</script>
 </body>
 </html>

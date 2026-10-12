@@ -4,97 +4,219 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Settings | BudgetBuddy</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-50 text-gray-800">
-  <header class="bg-white shadow-sm sticky top-0 z-50">
-    <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-      <div class="flex items-center gap-2">
-        <img src="assets/logo.png" alt="Logo" class="w-8 h-8">
-        <h1 class="font-bold text-xl text-blue-500">BudgetBuddy</h1>
-      </div>
-      <nav class="flex gap-6 text-gray-600 font-medium">
-        <a href="index.html" class="hover:text-blue-500">Dashboard</a>
-        <a href="transactions.html" class="hover:text-blue-500">Transactions</a>
-        <a href="analytics.html" class="hover:text-blue-500">Analytics</a>
-        <a href="settings.html" class="text-blue-500">Settings</a>
-      </nav>
-    </div>
-  </header>
-
-  <main class="container mx-auto px-6 py-10">
-    <h2 class="text-2xl font-bold mb-6">Settings</h2>
-
-    <div class="bg-white rounded-2xl p-6 shadow space-y-4">
-      <button id="toggleTheme"
-              class="w-full bg-blue-100 hover:bg-blue-200 text-blue-700 font-medium rounded-lg py-3 transition">
-        Toggle Dark Mode
-      </button>
-
-      <button id="exportData"
-              class="w-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-medium rounded-lg py-3 transition">
-        Export Data (CSV)
-      </button>
-
-      <button id="clearData"
-              class="w-full bg-rose-100 hover:bg-rose-200 text-rose-700 font-medium rounded-lg py-3 transition">
-        Clear All Data
-      </button>
-    </div>
-  </main>
-
-  <footer class="text-center py-6 text-gray-500 border-t mt-8">
-    © 2025 BudgetBuddy
-  </footer>
-
   <script>
-    const toggleTheme = document.getElementById('toggleTheme');
-    const exportData = document.getElementById('exportData');
-    const clearData = document.getElementById('clearData');
+      /* pre-paint theme: avoids dark/light flash, global dark mode */
+      try{(function(){var s={theme:"system"};try{s=Object.assign(s,JSON.parse(localStorage.getItem("bb_settings"))||{})}catch(e){}var t=s.theme;if(t==="system"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}document.documentElement.setAttribute("data-theme",t)})()}catch(e){}
+    </script>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-root"></div>
 
-    // Dark mode toggle
-    toggleTheme.addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
-    });
+  <div class="main-area">
+    <div class="topbar">
+      <button class="icon-btn" id="menuBtn" title="Show / hide sidebar">☰</button>
+      <div>
+        <h2>Settings</h2>
+        <div class="sub">Appearance · currency · budget · data</div>
+      </div>
+    </div>
 
-    // Load theme
-    if (localStorage.getItem('theme') === 'dark') {
-      document.body.classList.add('dark');
-    }
+    <div class="content">
+      <div id="status" class="panel" style="display:none;margin-bottom:14px" role="status"></div>
 
-    // Export CSV
-    exportData.addEventListener('click', () => {
-      const data = JSON.parse(localStorage.getItem('transactions')) || [];
-      if (!data.length) return alert('No data to export.');
-      const csv = [
-        ['Title', 'Amount', 'Type', 'Date'],
-        ...data.map(t => [t.title, t.amount, t.type, t.date])
-      ].map(row => row.join(',')).join('\n');
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'budgetbuddy_data.csv';
-      a.click();
-    });
+      <!-- Appearance -->
+      <div class="panel">
+        <h3>Appearance</h3>
+        <p class="hint">Dark mode now applies to every page, no flash on load.</p>
+        <div class="setting-row">
+          <div class="t"><b>Theme</b><span>System follows your OS setting.</span></div>
+          <div class="seg" id="themeSeg">
+            <button data-theme-val="light">☀️ Light</button>
+            <button data-theme-val="dark">🌙 Dark</button>
+            <button data-theme-val="system">💻 System</button>
+          </div>
+        </div>
+      </div>
 
-    // Clear all
-    clearData.addEventListener('click', () => {
-      if (confirm('Are you sure you want to clear all data?')) {
-        localStorage.removeItem('transactions');
-        alert('All data cleared.');
+      <!-- Preferences -->
+      <div class="panel">
+        <h3>Preferences</h3>
+        <p class="hint">Used for amounts and budget bars across the app.</p>
+        <div class="setting-row">
+          <div class="t"><b>Currency</b><span>Symbol shown before every amount.</span></div>
+          <select id="currencySel" aria-label="Currency"></select>
+        </div>
+        <div class="setting-row">
+          <div class="t"><b>Monthly budget</b><span>Expense target per month. 0 = disabled. Shown on the dashboard.</span></div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="number" id="budgetInput" min="0" step="10" placeholder="e.g. 1500" style="width:140px">
+            <button class="btn" id="saveBudget">Save</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data -->
+      <div class="panel">
+        <h3>Data</h3>
+        <p class="hint">Backup, restore and demo content.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button id="exportCsv" class="btn-ghost">⬇ Export CSV</button>
+          <button id="exportJson" class="btn-ghost">⬇ Export JSON</button>
+          <label class="btn-ghost" style="cursor:pointer">⬆ Import JSON
+            <input type="file" id="importFile" accept="application/json" hidden>
+          </label>
+          <button id="sampleData" class="btn-ghost">✨ Load sample data</button>
+        </div>
+      </div>
+
+      <!-- Danger zone -->
+      <div class="panel" style="border-color:color-mix(in srgb, var(--red) 40%, transparent)">
+        <h3 style="color:var(--red)">Danger zone</h3>
+        <p class="hint">Irreversible actions. Export first if unsure.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button id="clearData" class="btn-ghost btn-danger">🗑 Clear all transactions</button>
+          <button id="resetSettings" class="btn-ghost btn-danger">↩ Reset settings</button>
+        </div>
+      </div>
+    </div>
+
+    <footer>© 2025 BudgetBuddy</footer>
+  </div>
+</div>
+
+<script src="js/monthly.js"></script>
+<script src="js/layout.js"></script>
+<script>
+  const BB = window.BudgetBuddy;
+  const status = document.getElementById("status");
+
+  function note(msg, ok = true) {
+    status.style.display = "block";
+    status.style.borderColor = ok ? "var(--line)" : "var(--red)";
+    status.innerHTML = `<b>${ok ? "✓" : "⚠"}</b> ${msg}`;
+    clearTimeout(note._t);
+    note._t = setTimeout(() => (status.style.display = "none"), 3500);
+  }
+
+  function download(name, text, type) {
+    const blob = new Blob([text], { type });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
+
+  // --- init controls from stored settings ---
+  const s = BB.getSettings();
+  document.querySelectorAll("#themeSeg button").forEach((b) =>
+    b.classList.toggle("on", b.dataset.themeVal === s.theme)
+  );
+  document.getElementById("currencySel").value = s.currency;
+  document.getElementById("budgetInput").value = s.monthlyBudget || "";
+
+  // --- theme ---
+  document.querySelectorAll("#themeSeg button").forEach((b) =>
+    b.addEventListener("click", () => {
+      BB.saveSettings({ theme: b.dataset.themeVal });
+      document.querySelectorAll("#themeSeg button").forEach((x) => x.classList.remove("on"));
+      b.classList.add("on");
+      window.dispatchEvent(new Event("bb:theme"));
+      note(`Theme set to <b>${b.dataset.themeVal}</b> — applied everywhere.`);
+    })
+  );
+
+  // --- currency ---
+  document.getElementById("currencySel").addEventListener("change", (e) => {
+    BB.saveSettings({ currency: e.target.value });
+    note(`Currency set to <b>${e.target.value}</b> — amounts update on every page.`);
+  });
+
+  // --- budget ---
+  document.getElementById("saveBudget").addEventListener("click", () => {
+    const v = Math.max(0, Number(document.getElementById("budgetInput").value) || 0);
+    BB.saveSettings({ monthlyBudget: v });
+    note(v > 0 ? `Monthly budget set to <b>${BB.money(v)}</b>.` : "Monthly budget disabled.");
+  });
+
+  // --- export CSV ---
+  document.getElementById("exportCsv").addEventListener("click", () => {
+    const data = JSON.parse(localStorage.getItem("transactions")) || [];
+    if (!data.length) return note("No data to export.", false);
+    const csv = [
+      ["Description", "Amount", "Type", "Category", "Date"],
+      ...data.map((t) => [t.description || t.title, t.amount, t.type, t.category || "", t.date || ""]),
+    ]
+      .map((r) => r.join(","))
+      .join("\n");
+    download("budgetbuddy_data.csv", csv, "text/csv");
+    note("CSV exported.");
+  });
+
+  // --- export JSON ---
+  document.getElementById("exportJson").addEventListener("click", () => {
+    const data = JSON.parse(localStorage.getItem("transactions")) || [];
+    if (!data.length) return note("No data to export.", false);
+    download("budgetbuddy_data.json", JSON.stringify(data, null, 2), "application/json");
+    note("JSON backup exported.");
+  });
+
+  // --- import JSON ---
+  document.getElementById("importFile").addEventListener("change", (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const arr = JSON.parse(r.result);
+        if (!Array.isArray(arr)) throw 0;
+        const clean = BB.normalizeTransactions(arr);
+        localStorage.setItem("transactions", JSON.stringify(clean));
+        note(`Imported <b>${clean.length}</b> transactions.`);
+      } catch {
+        note("Invalid backup file.", false);
       }
-    });
-  </script>
+      e.target.value = "";
+    };
+    r.readAsText(f);
+  });
 
-  <style>
-    .dark {
-      background-color: #1f2937;
-      color: #e5e7eb;
+  // --- sample data ---
+  document.getElementById("sampleData").addEventListener("click", () => {
+    if (!confirm("Load sample data? Your current transactions stay untouched (samples are added).")) return;
+    const now = new Date();
+    const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const sample = [
+      { description: "Salary", amount: 2500, type: "income", category: "general", date: `${ym}-01` },
+      { description: "Groceries", amount: 180, type: "expense", category: "food", date: `${ym}-03` },
+      { description: "Bus pass", amount: 60, type: "expense", category: "transport", date: `${ym}-05` },
+      { description: "Freelance", amount: 450, type: "income", category: "general", date: `${ym}-10` },
+      { description: "Restaurant", amount: 75, type: "expense", category: "food", date: `${ym}-12` },
+      { description: "Electricity", amount: 90, type: "expense", category: "bills", date: `${ym}-15` },
+      { description: "New shoes", amount: 120, type: "expense", category: "shopping", date: `${ym}-18` },
+      { description: "Rent", amount: 800, type: "expense", category: "housing", date: `${ym}-02` },
+      { description: "Cinema", amount: 35, type: "expense", category: "entertainment", date: `${ym}-20` },
+    ].map((t, i) => Object.assign({ id: Date.now() + i }, t));
+    const all = JSON.parse(localStorage.getItem("transactions")) || [];
+    localStorage.setItem("transactions", JSON.stringify(all.concat(sample)));
+    note("Sample data added — check the Dashboard.");
+  });
+
+  // --- danger zone ---
+  document.getElementById("clearData").addEventListener("click", () => {
+    if (confirm("Delete ALL transactions? This cannot be undone.")) {
+      localStorage.removeItem("transactions");
+      note("All transactions deleted.");
     }
-    .dark .bg-white { background-color: #374151; }
-    .dark .text-blue-500 { color: #93c5fd; }
-  </style>
+  });
+  document.getElementById("resetSettings").addEventListener("click", () => {
+    if (confirm("Reset all settings to defaults?")) {
+      localStorage.removeItem("bb_settings");
+      location.reload();
+    }
+  });
+</script>
 </body>
 </html>

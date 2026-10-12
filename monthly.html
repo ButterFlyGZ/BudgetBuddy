@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monthly Tracking | BudgetBuddy</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+      /* pre-paint theme: avoids dark/light flash, global dark mode */
+      try{(function(){var s={theme:"system"};try{s=Object.assign(s,JSON.parse(localStorage.getItem("bb_settings"))||{})}catch(e){}var t=s.theme;if(t==="system"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}document.documentElement.setAttribute("data-theme",t)})()}catch(e){}
+    </script>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-root"></div>
+
+  <div class="main-area">
+    <div class="topbar">
+      <button class="icon-btn" id="menuBtn" title="Show / hide sidebar">☰</button>
+      <div>
+        <h2>Monthly Tracking</h2>
+        <div class="sub">Consult each month · income & expenses</div>
+      </div>
+      <div class="actions">
+        <button class="btn-ghost" id="prevMonth">←</button>
+        <input type="month" id="monthPicker">
+        <button class="btn-ghost" id="nextMonth">→</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="kpi-grid">
+        <div class="kpi k-green">
+          <div class="lbl">Income · <span id="monthLabel1">–</span></div>
+          <div class="val" id="month-income" style="color:#059669">$0.00</div>
+        </div>
+        <div class="kpi k-red">
+          <div class="lbl">Expenses</div>
+          <div class="val" id="month-expense" style="color:#dc2626">$0.00</div>
+        </div>
+        <div class="kpi k-blue">
+          <div class="lbl">Balance</div>
+          <div class="val" id="month-balance">$0.00</div>
+        </div>
+        <div class="kpi k-amber">
+          <div class="lbl">Transactions</div>
+          <div class="val" id="month-count">0</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Daily Income vs Expenses — <span id="monthLabel2">–</span></h3>
+        <p class="hint">Line graph of each day in the selected month.</p>
+        <canvas id="dailyChart" height="110"></canvas>
+      </div>
+
+      <div class="panel">
+        <h3>Transactions in <span id="monthLabel3">–</span></h3>
+        <p class="hint">Newest first.</p>
+        <div id="monthList" style="display:grid;gap:9px"></div>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:22px 0 12px;flex-wrap:wrap">
+        <h2 style="margin:0;font-size:18px">Year Overview</h2>
+        <select id="yearPicker"></select>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel">
+          <h3>Income vs Expenses per Month</h3>
+          <p class="hint">Bar chart, Jan → Dec. Click a bar to load that month.</p>
+          <canvas id="yearlyChart" height="200"></canvas>
+        </div>
+        <div class="panel">
+          <h3>Cumulative Balance</h3>
+          <p class="hint">Running total across the year.</p>
+          <canvas id="cumulativeChart" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <footer>© 2025 BudgetBuddy</footer>
+  </div>
+</div>
+
+<script src="js/monthly.js"></script>
+<script src="js/layout.js"></script>
+<script>
+  const BB = window.BudgetBuddy;
+  const monthPicker = document.getElementById("monthPicker");
+  const yearPicker = document.getElementById("yearPicker");
+
+  let dailyChart, yearlyChart, cumulativeChart;
+
+  const fmtMonth = BB.fmtMonth, shiftMonth = BB.shiftMonth;
+
+  function renderMonth() {
+    const ym = monthPicker.value;
+    const all = BB.loadTransactions();
+    const list = BB.filterByMonth(all, ym);
+    const t = BB.totals(list);
+    const series = BB.dailySeries(all, ym);
+
+    document.getElementById("month-income").textContent = BB.money(t.income);
+    document.getElementById("month-expense").textContent = BB.money(t.expense);
+    const bal = document.getElementById("month-balance");
+    bal.textContent = BB.money(t.balance);
+    bal.style.color = t.balance >= 0 ? "#4338ca" : "#dc2626";
+    document.getElementById("month-count").textContent = t.count;
+    ["monthLabel1", "monthLabel2", "monthLabel3"].forEach(id => {
+      document.getElementById(id).textContent = fmtMonth(ym);
+    });
+
+    if (dailyChart) dailyChart.destroy();
+    dailyChart = new Chart(document.getElementById("dailyChart"), {
+      type: "line",
+      data: {
+        labels: series.labels,
+        datasets: [
+          { label: "Income ($)", data: series.income, borderColor: "#10b981", backgroundColor: "rgba(16,185,129,0.15)", fill: true, tension: 0.3 },
+          { label: "Expenses ($)", data: series.expense, borderColor: "#ef4444", backgroundColor: "rgba(239,68,68,0.15)", fill: true, tension: 0.3 }
+        ]
+      },
+      options: { responsive: true, scales: { y: { beginAtZero: true }, x: { title: { display: true, text: "Day of month" } } } }
+    });
+
+    const box = document.getElementById("monthList");
+    box.innerHTML = "";
+    if (!list.length) {
+      box.innerHTML = `<p style="text-align:center;color:var(--muted)">No transactions this month.</p>`;
+    } else {
+      [...list].sort((a, b) => b.date.localeCompare(a.date)).forEach(t => {
+        const row = document.createElement("div");
+        row.className = "tx-row";
+        row.innerHTML = BB.txRowInner(t, BB.amtHTML(t));
+        box.appendChild(row);
+      });
+    }
+  }
+
+  function renderYear() {
+    const year = yearPicker.value;
+    const all = BB.loadTransactions();
+    const s = BB.yearlySeries(all, year);
+
+    if (yearlyChart) yearlyChart.destroy();
+    yearlyChart = new Chart(document.getElementById("yearlyChart"), {
+      type: "bar",
+      data: {
+        labels: s.labels,
+        datasets: [
+          { label: "Income", data: s.income, backgroundColor: "#10b981", borderRadius: 5 },
+          { label: "Expenses", data: s.expense, backgroundColor: "#ef4444", borderRadius: 5 }
+        ]
+      },
+      options: {
+        responsive: true,
+        scales: { y: { beginAtZero: true } },
+        onClick: (e, els) => {
+          if (els.length) {
+            const i = els[0].index;
+            monthPicker.value = `${year}-${String(i + 1).padStart(2, "0")}`;
+            renderMonth();
+            document.getElementById("month-income").scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        }
+      }
+    });
+
+    if (cumulativeChart) cumulativeChart.destroy();
+    cumulativeChart = new Chart(document.getElementById("cumulativeChart"), {
+      type: "line",
+      data: {
+        labels: s.labels,
+        datasets: [
+          { label: "Cumulative balance ($)", data: s.cumulative, borderColor: "#6366f1", backgroundColor: "rgba(99,102,241,0.15)", fill: true, tension: 0.3 }
+        ]
+      },
+      options: { responsive: true }
+    });
+  }
+
+  (function init() {
+    const all = BB.loadTransactions();
+    const q = new URLSearchParams(location.search);
+    const requested = q.get("month");
+    monthPicker.value = requested && /^\d{4}-\d{2}$/.test(requested) ? requested : BB.currentMonthKey();
+    const years = BB.availableYears(all);
+    yearPicker.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join("");
+    yearPicker.value = monthPicker.value.slice(0, 4);
+    if (!years.includes(yearPicker.value)) yearPicker.value = years[0];
+    renderMonth();
+    renderYear();
+  })();
+
+  monthPicker.addEventListener("change", renderMonth);
+  yearPicker.addEventListener("change", renderYear);
+  document.getElementById("prevMonth").addEventListener("click", () => {
+    monthPicker.value = shiftMonth(monthPicker.value, -1);
+    renderMonth();
+  });
+  document.getElementById("nextMonth").addEventListener("click", () => {
+    monthPicker.value = shiftMonth(monthPicker.value, 1);
+    renderMonth();
+  });
+</script>
+</body>
+</html>

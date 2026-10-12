@@ -4,77 +4,77 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Transactions | BudgetBuddy</title>
-  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script>
+      /* pre-paint theme: avoids dark/light flash, global dark mode */
+      try{(function(){var s={theme:"system"};try{s=Object.assign(s,JSON.parse(localStorage.getItem("bb_settings"))||{})}catch(e){}var t=s.theme;if(t==="system"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}document.documentElement.setAttribute("data-theme",t)})()}catch(e){}
+    </script>
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="bg-gradient-to-b from-blue-50 to-indigo-50 min-h-screen">
+<body>
+<div class="app-shell">
+  <div id="sidebar-root"></div>
 
-  <!-- Navbar -->
-  <header class="bg-white shadow-sm sticky top-0 z-50">
-    <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-      <a href="index.html" class="flex items-center gap-2 hover:opacity-80 transition">
-        <img src="assets/logo.png" alt="Logo" class="w-8 h-8">
-        <h1 class="font-bold text-xl text-blue-600">BudgetBuddy</h1>
-      </a>
-      <nav class="flex gap-6 text-gray-600 font-medium">
-        <a href="index.html" class="hover:text-blue-600">Dashboard</a>
-        <a href="transactions.html" class="text-blue-600 font-semibold">Transactions</a>
-        <a href="analytics.html" class="hover:text-blue-600">Analytics</a>
-        <a href="settings.html" class="hover:text-blue-600">Settings</a>
-      </nav>
-    </div>
-  </header>
-
-  <!-- Main Content -->
-  <main class="container mx-auto px-6 py-8">
-    <h2 class="text-2xl font-bold mb-6 text-gray-700">Manage Your Transactions</h2>
-
-    <!-- Add Transaction Form -->
-    <div class="bg-white rounded-2xl p-6 shadow mb-8">
-      <h3 class="text-lg font-semibold mb-4 text-gray-600">Add New Transaction</h3>
-      <form id="transactionForm" class="grid md:grid-cols-5 gap-4">
-        <input type="text" id="description" placeholder="Description" required class="border p-3 rounded-lg">
-        <input type="number" id="amount" placeholder="Amount" required class="border p-3 rounded-lg">
-        <select id="type" class="border p-3 rounded-lg">
-          <option value="income">Income</option>
-          <option value="expense">Expense</option>
-        </select>
-        <select id="category" class="border p-3 rounded-lg">
-          <option value="general">General</option>
-          <option value="food">Food</option>
-          <option value="transport">Transport</option>
-          <option value="shopping">Shopping</option>
-          <option value="bills">Bills</option>
-        </select>
-        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg transition">
-          Add Transaction
-        </button>
-      </form>
+  <div class="main-area">
+    <div class="topbar">
+      <button class="icon-btn" id="menuBtn" title="Show / hide sidebar">☰</button>
+      <div>
+        <h2>Transactions</h2>
+        <div class="sub">Add, search and filter</div>
+      </div>
     </div>
 
-    <!-- Filters -->
-    <div class="flex flex-wrap gap-4 mb-6 items-center">
-      <input type="text" id="search" placeholder="Search description..." class="border p-3 rounded-lg flex-1">
-      <select id="filterType" class="border p-3 rounded-lg">
-        <option value="all">All</option>
-        <option value="income">Income</option>
-        <option value="expense">Expense</option>
-      </select>
+    <div class="content">
+      <div class="panel">
+        <h3>Add new transaction</h3>
+        <p class="hint">Date defaults to today — change it for past entries.</p>
+        <form id="transactionForm" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
+          <input type="text" id="description" placeholder="Description" required>
+          <input type="number" id="amount" placeholder="Amount" step="0.01" min="0" required>
+          <select id="type">
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+          </select>
+          <select id="category" data-cats aria-label="Category"></select>
+          <input type="date" id="date" title="Transaction date">
+          <button type="submit" class="btn">Add Transaction</button>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h3>All transactions</h3>
+        <p class="hint" id="filterHint"></p>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+          <div class="seg" id="viewSeg" role="tablist" aria-label="Change view">
+            <button data-view="list" title="List view">☰ List</button>
+            <button data-view="grid" title="Card grid view">▦ Grid</button>
+            <button data-view="table" title="Compact table view">▤ Table</button>
+            <button data-view="days" title="Grouped by day view">🗓 Days</button>
+          </div>
+          <span class="pill" id="viewCount"></span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:6px">
+          <input type="text" id="search" placeholder="Search description..." style="flex:1;min-width:160px">
+          <select id="filterType">
+            <option value="all">All</option>
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+          </select>
+          <select id="filterCategory" data-cats="all" aria-label="Filter by category"></select>
+          <input type="month" id="filterMonth" title="Filter by month">
+          <button id="clearFilters" class="btn-ghost">Clear</button>
+        </div>
+      </div>
+
+      <div id="transactionList" style="display:grid;gap:10px"></div>
     </div>
 
-    <!-- Transactions List -->
-    <div id="transactionList" class="grid gap-4">
-      <!-- Transaction cards will appear here -->
-    </div>
-  </main>
+    <footer>© 2025 BudgetBuddy</footer>
+  </div>
+</div>
 
-  <!-- Footer -->
-  <footer class="text-center py-6 text-gray-500 border-t mt-8">
-    © 2025 BudgetBuddy
-  </footer>
-
-  <!-- JS -->
-  <script type="module" src="js/transactions.js"></script>
+<script src="js/monthly.js"></script>
+<script src="js/layout.js"></script>
+<script type="module" src="js/transactions.js"></script>
 </body>
 </html>

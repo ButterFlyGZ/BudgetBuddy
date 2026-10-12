@@ -4,65 +4,69 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Statistics | BudgetBuddy</title>
+  <script>
+      /* pre-paint theme: avoids dark/light flash, global dark mode */
+      try{(function(){var s={theme:"system"};try{s=Object.assign(s,JSON.parse(localStorage.getItem("bb_settings"))||{})}catch(e){}var t=s.theme;if(t==="system"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}document.documentElement.setAttribute("data-theme",t)})()}catch(e){}
+    </script>
   <link rel="stylesheet" href="css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+<div class="app-shell">
+  <div id="sidebar-root"></div>
 
-  <header>
-    <img src="assets/logo.png" alt="BudgetBuddy" class="logo">
-    <nav>
-      <ul class="nav-links">
-        <li><a href="index.html">Home</a></li>
-        <li><a href="add.html">Add</a></li>
-        <li><a href="history.html">History</a></li>
-        <li><a href="stats.html" class="active">Stats</a></li>
-        <li><a href="settings.html">Settings</a></li>
-      </ul>
-    </nav>
-  </header>
+  <div class="main-area">
+    <div class="topbar">
+      <button class="icon-btn" id="menuBtn" title="Show / hide sidebar">☰</button>
+      <div>
+        <h2>Spending Overview</h2>
+        <div class="sub">Expenses by label</div>
+      </div>
+    </div>
 
-  <main>
-    <h2>Spending Overview</h2>
-    <canvas id="chart"></canvas>
-  </main>
+    <div class="content">
+      <div class="panel">
+        <canvas id="chart"></canvas>
+      </div>
+    </div>
 
-  <footer>
-    <p>© 2025 BudgetBuddy</p>
-  </footer>
+    <footer>© 2025 BudgetBuddy</footer>
+  </div>
+</div>
 
-  <script src="js/storage.js"></script>
-  <script>
-    const ctx = document.getElementById("chart").getContext("2d");
-    const transactions = JSON.parse(localStorage.getItem("transactions")) || [];
+<script src="js/layout.js"></script>
+<script>
+  const ctx = document.getElementById("chart").getContext("2d");
+  const transactions = JSON.parse(localStorage.getItem("transactions")) || [];
 
-    const expenses = transactions.filter(t => t.type === "expense");
-    const grouped = {};
+  const expenses = transactions.filter(t => t.type === "expense");
+  const grouped = {};
 
-    expenses.forEach(t => {
-      grouped[t.title] = (grouped[t.title] || 0) + t.amount;
-    });
+  expenses.forEach(t => {
+    const key = t.title || t.description || "Other";
+    grouped[key] = (grouped[key] || 0) + Number(t.amount);
+  });
 
-    const labels = Object.keys(grouped);
-    const data = Object.values(grouped);
+  const labels = Object.keys(grouped);
+  const data = Object.values(grouped);
 
-    new Chart(ctx, {
-      type: "pie",
-      data: {
-        labels,
-        datasets: [{
-          data,
-          backgroundColor: ["#ff6384", "#36a2eb", "#ffce56", "#4CAF50", "#9966FF"]
-        }]
-      },
-      options: {
-        plugins: {
-          legend: {
-            position: "bottom"
-          }
+  new Chart(ctx, {
+    type: "pie",
+    data: {
+      labels: labels.length ? labels : ["No expenses"],
+      datasets: [{
+        data: data.length ? data : [1],
+        backgroundColor: ["#ff6384", "#36a2eb", "#ffce56", "#4CAF50", "#9966FF"]
+      }]
+    },
+    options: {
+      plugins: {
+        legend: {
+          position: "bottom"
         }
       }
-    });
-  </script>
+    }
+  });
+</script>
 </body>
 </html>

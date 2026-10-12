@@ -4,89 +4,224 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>BudgetBuddy Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+      /* pre-paint theme: avoids dark/light flash, global dark mode */
+      try{(function(){var s={theme:"system"};try{s=Object.assign(s,JSON.parse(localStorage.getItem("bb_settings"))||{})}catch(e){}var t=s.theme;if(t==="system"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}document.documentElement.setAttribute("data-theme",t)})()}catch(e){}
+    </script>
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="bg-gray-50 text-gray-800">
+<body>
+<div class="app-shell">
+  <div id="sidebar-root"></div>
 
-  <header class="bg-white shadow-sm sticky top-0 z-50">
-  <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-    <!-- Logo + App Name -->
-    <a href="index.html" class="flex items-center gap-2 hover:opacity-80 transition">
-      <img src="assets/logo.png" alt="Logo" class="w-8 h-8">
-      <h1 class="font-bold text-xl text-blue-600">BudgetBuddy</h1>
-    </a>
+  <div class="main-area">
+    <div class="topbar">
+      <button class="icon-btn" id="menuBtn" title="Show / hide sidebar">☰</button>
+      <div>
+        <h2>Dashboard</h2>
+        <div class="sub" id="periodSub">Grouped by month</div>
+      </div>
+      <div class="actions">
+        <button class="btn-ghost" id="prevMonth">←</button>
+        <input type="month" id="monthPicker">
+        <button class="btn-ghost" id="nextMonth">→</button>
+        <a class="btn" href="transactions.html">+ Add</a>
+      </div>
+    </div>
 
-    <!-- Navigation Links -->
-    <nav class="flex gap-6 text-gray-600 font-medium">
-      <a href="index.html" class="hover:text-blue-600">Dashboard</a>
-      <a href="transactions.html" class="hover:text-blue-600">Transactions</a>
-      <a href="analytics.html" class="hover:text-blue-600">Analytics</a>
-      <a href="settings.html" class="hover:text-blue-600">Settings</a>
-    </nav>
+    <div class="content">
+      <div class="kpi-grid">
+        <div class="kpi k-green">
+          <div class="lbl">Income · <span class="mLabel">–</span></div>
+          <div class="val" id="kIncome" style="color:#059669">$0.00</div>
+          <div class="delta" id="dIncome">–</div>
+        </div>
+        <div class="kpi k-red">
+          <div class="lbl">Expenses · <span class="mLabel">–</span></div>
+          <div class="val" id="kExpense" style="color:#dc2626">$0.00</div>
+          <div class="delta" id="dExpense">–</div>
+        </div>
+        <div class="kpi k-blue">
+          <div class="lbl">Balance · <span class="mLabel">–</span></div>
+          <div class="val" id="kBalance">$0.00</div>
+          <div class="delta" id="dBalance">–</div>
+        </div>
+        <div class="kpi k-amber">
+          <div class="lbl">Savings rate</div>
+          <div class="val" id="kSave">0%</div>
+          <div class="delta flat" id="dSave">–</div>
+        </div>
+      </div>
+
+      <div class="panel" id="budgetPanel" style="display:none">
+        <h3>Monthly budget · <span class="mLabel">–</span></h3>
+        <p class="hint" id="budgetHint"></p>
+        <div class="progress" id="budgetBar"><div id="budgetFill" style="width:0%"></div></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel">
+          <h3>Cashflow by month <span class="pill" id="yearPill">2026</span></h3>
+          <p class="hint">Click a month bar to open it in Monthly tracking.</p>
+          <canvas id="yearChart" height="190"></canvas>
+        </div>
+        <div class="panel">
+          <h3>Expenses by category <span class="pill mLabel">–</span></h3>
+          <p class="hint">Click a slice to see those transactions.</p>
+          <canvas id="catChart" height="190"></canvas>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel">
+          <h3>Daily trend · <span class="mLabel">–</span></h3>
+          <p class="hint">Click a point to jump to that day's transactions.</p>
+          <canvas id="dailyChart" height="170"></canvas>
+        </div>
+        <div class="panel">
+          <h3>Recent in <span class="mLabel">–</span></h3>
+          <p class="hint" id="recentHint">Latest 5 of the selected month.</p>
+          <div id="recentList"></div>
+          <a id="seeAll" href="transactions.html" style="font-size:13px;font-weight:700;color:#4338ca">See all →</a>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Top categories · <span class="mLabel">–</span></h3>
+        <p class="hint">Where the money went this month.</p>
+        <div id="topCats"></div>
+      </div>
+    </div>
+
+    <footer>© 2025 BudgetBuddy</footer>
   </div>
-</header>
+</div>
 
+<script src="js/monthly.js"></script>
+<script src="js/layout.js"></script>
+<script>
+const BB = window.BudgetBuddy;
+const monthPicker = document.getElementById("monthPicker");
+let yearChart, catChart, dailyChart;
+let lastDailyLabels = [];
 
-  <!-- Main Content -->
-  <main class="container mx-auto px-6 py-8">
+const catColor = BB.catColor;
 
-    <h2 class="text-2xl font-bold mb-6">Overview</h2>
+const fmtMonth = BB.fmtMonth, shiftMonth = BB.shiftMonth;
+function delta(cur,prev,invert=false){
+  if(!prev) return {txt:"no prior month",cls:"flat"};
+  const pct=((cur-prev)/prev*100);
+  if(!isFinite(pct)) return {txt:"–",cls:"flat"};
+  const good = invert ? pct<0 : pct>0;
+  const bad = invert ? pct>0 : pct<0;
+  return {txt:`${pct>=0?"+":""}${pct.toFixed(1)}% vs last month`, cls: good?"up":bad?"down":"flat"};
+}
 
-    <!-- Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-      <div class="bg-white rounded-2xl p-6 shadow hover:shadow-md transition">
-        <h3 class="text-gray-500">Total Balance</h3>
-        <p id="total-balance" class="text-3xl font-bold text-blue-600 mt-2">$0.00</p>
-      </div>
-      <div class="bg-green-50 rounded-2xl p-6 shadow hover:shadow-md transition">
-        <h3 class="text-gray-500">Total Income</h3>
-        <p id="total-income" class="text-3xl font-bold text-green-600 mt-2">$0.00</p>
-      </div>
-      <div class="bg-red-50 rounded-2xl p-6 shadow hover:shadow-md transition">
-        <h3 class="text-gray-500">Total Expenses</h3>
-        <p id="total-expense" class="text-3xl font-bold text-red-600 mt-2">$0.00</p>
-      </div>
-    </div>
+function render(){
+  const ym = monthPicker.value;
+  const year = ym.slice(0,4);
+  const all = BB.loadTransactions();
+  const list = BB.filterByMonth(all, ym);
+  const prevYm = shiftMonth(ym,-1);
+  const prev = BB.totals(BB.filterByMonth(all, prevYm));
+  const t = BB.totals(list);
+  const s = BB.yearlySeries(all, year);
+  const d = BB.dailySeries(all, ym);
 
-    <!-- Chart -->
-    <div class="bg-white rounded-2xl p-6 shadow">
-      <h3 class="text-xl font-semibold mb-4">Monthly Summary</h3>
-      <canvas id="summaryChart" height="100"></canvas>
-    </div>
-  </main>
+  document.querySelectorAll(".mLabel").forEach(e=>e.textContent=fmtMonth(ym));
+  document.getElementById("periodSub").textContent = `${fmtMonth(ym)} · ${t.count} transactions`;
+  document.getElementById("yearPill").textContent = year;
 
-  <footer class="text-center py-6 text-gray-500 border-t mt-8">
-    © 2025 BudgetBuddy
-  </footer>
+  document.getElementById("kIncome").textContent = BB.money(t.income);
+  document.getElementById("kExpense").textContent = BB.money(t.expense);
+  const bal=document.getElementById("kBalance");
+  bal.textContent = BB.money(t.balance);
+  bal.style.color = t.balance>=0 ? "#4338ca" : "#dc2626";
+  const rate = t.income>0 ? (t.balance/t.income*100) : 0;
+  document.getElementById("kSave").textContent=`${rate.toFixed(0)}%`;
+  document.getElementById("dSave").textContent = t.income>0 ? (rate>=20?"healthy ✓":rate>=0?"tight":"overspent") : "no income";
 
-  <script src="js/storage.js"></script>
-  <script>
-    const transactions = JSON.parse(localStorage.getItem("transactions")) || [];
+  const di=delta(t.income,prev.income), de=delta(t.expense,prev.expense,true), db=delta(t.balance,prev.balance);
+  const set=(id,v)=>{const e=document.getElementById(id);e.textContent=v.txt;e.className="delta "+v.cls;};
+  set("dIncome",di); set("dExpense",de); set("dBalance",db);
 
-    const income = transactions.filter(t => t.type === "income")
-      .reduce((sum, t) => sum + t.amount, 0);
-    const expense = transactions.filter(t => t.type === "expense")
-      .reduce((sum, t) => sum + t.amount, 0);
-    const balance = income - expense;
+  // Monthly budget bar (set in Settings)
+  const budget = BB.getSettings().monthlyBudget || 0;
+  const bp = document.getElementById("budgetPanel");
+  if (budget > 0) {
+    bp.style.display = "";
+    const pct = Math.min(100, (t.expense / budget) * 100);
+    document.getElementById("budgetFill").style.width = pct.toFixed(1) + "%";
+    document.getElementById("budgetBar").classList.toggle("over", t.expense > budget);
+    document.getElementById("budgetHint").textContent =
+      t.expense > budget
+        ? `${BB.money(t.expense)} spent of ${BB.money(budget)} — over budget ⚠`
+        : `${BB.money(t.expense)} spent of ${BB.money(budget)} — ${BB.money(budget - t.expense)} left.`;
+  } else { bp.style.display = "none"; }
 
-    document.getElementById("total-income").textContent = `$${income.toFixed(2)}`;
-    document.getElementById("total-expense").textContent = `$${expense.toFixed(2)}`;
-    document.getElementById("total-balance").textContent = `$${balance.toFixed(2)}`;
+  if(yearChart) yearChart.destroy();
+  yearChart = new Chart(document.getElementById("yearChart"),{
+    type:"bar",
+    data:{labels:s.labels,datasets:[
+      {label:"Income",data:s.income,backgroundColor:"#10b981",borderRadius:6},
+      {label:"Expenses",data:s.expense,backgroundColor:"#ef4444",borderRadius:6}]},
+    options:{responsive:true,scales:{y:{beginAtZero:true}},
+      onClick:(e,els)=>{ if(els.length){ const i=els[0].index; const mm=`${year}-${String(i+1).padStart(2,"0")}`; location.href=`monthly.html?month=${mm}`; } }}
+  });
 
-    new Chart(document.getElementById("summaryChart"), {
-      type: 'bar',
-      data: {
-        labels: ['Income', 'Expense'],
-        datasets: [{
-          label: 'Amount ($)',
-          data: [income, expense],
-          backgroundColor: ['#10b981', '#ef4444']
-        }]
-      },
-      options: { responsive: true, scales: { y: { beginAtZero: true } } }
-    });
-  </script>
+  const byCat={};
+  list.filter(x=>x.type==="expense").forEach(x=>{byCat[x.category]=(byCat[x.category]||0)+x.amount;});
+  const cats=Object.keys(byCat), vals=Object.values(byCat);
+  if(catChart) catChart.destroy();
+  catChart = new Chart(document.getElementById("catChart"),{
+    type:"doughnut",
+    data:{labels:cats.length?cats:["No expenses"],datasets:[{data:vals.length?vals:[1],backgroundColor:cats.map(catColor)}]},
+    options:{cutout:"62%",plugins:{legend:{position:"bottom"}},
+      onClick:(e,els)=>{ if(els.length&&cats.length){ const c=cats[els[0].index]; location.href=`transactions.html?month=${ym}&category=${encodeURIComponent(c)}`; } }}
+  });
+
+  lastDailyLabels = d.labels.map(dd=>`${ym}-${String(dd).padStart(2,"0")}`);
+  if(dailyChart) dailyChart.destroy();
+  dailyChart = new Chart(document.getElementById("dailyChart"),{
+    type:"line",
+    data:{labels:d.labels,datasets:[
+      {label:"Income",data:d.income,borderColor:"#10b981",backgroundColor:"rgba(16,185,129,.12)",fill:true,tension:.35,pointRadius:4,pointHoverRadius:7},
+      {label:"Expenses",data:d.expense,borderColor:"#ef4444",backgroundColor:"rgba(239,68,68,.12)",fill:true,tension:.35,pointRadius:4,pointHoverRadius:7}]},
+    options:{responsive:true,scales:{y:{beginAtZero:true}},
+      onClick:(e,els)=>{ if(els.length){ const day=lastDailyLabels[els[0].index]; location.href=`transactions.html?day=${day}`; } }}
+  });
+
+  const box=document.getElementById("recentList"); box.innerHTML="";
+  const recent=[...list].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
+  document.getElementById("recentHint").textContent = recent.length?`Latest ${recent.length} of ${list.length} in ${fmtMonth(ym)}.`:"Nothing this month yet.";
+  if(!recent.length) box.innerHTML=`<p style="color:var(--muted);font-size:14px">No transactions this month.</p>`;
+  recent.forEach(x=>{
+    const row=document.createElement("div"); row.className="tx-row";
+    row.innerHTML = BB.txRowInner(x, BB.amtHTML(x));
+    box.appendChild(row);
+  });
+  document.getElementById("seeAll").href=`transactions.html?month=${ym}`;
+
+  const tc=document.getElementById("topCats"); tc.innerHTML="";
+  const max=Math.max(1,...vals);
+  cats.sort((a,b)=>byCat[b]-byCat[a]).slice(0,5).forEach(c=>{
+    const pct=(byCat[c]/max*100).toFixed(0);
+    const row=document.createElement("a");
+    row.href=`transactions.html?month=${ym}&category=${encodeURIComponent(c)}`;
+    row.style.cssText="text-decoration:none;color:inherit;display:block;margin-bottom:10px";
+    row.innerHTML=`<div style="display:flex;justify-content:space-between;font-size:13.5px;margin-bottom:4px"><span><span class="cat-dot" style="background:${catColor(c)}"></span><b>${c}</b></span><span>${BB.money(byCat[c])}</span></div>
+      <div style="background:var(--card-2);border:1px solid var(--line);border-radius:99px;height:9px"><div style="width:${pct}%;height:9px;border-radius:99px;background:${catColor(c)}"></div></div>`;
+    tc.appendChild(row);
+  });
+  if(!cats.length) tc.innerHTML=`<p style="color:var(--muted);font-size:14px">No expenses this month — nothing to rank.</p>`;
+}
+
+monthPicker.value = BB.currentMonthKey();
+render();
+monthPicker.addEventListener("change",render);
+document.getElementById("prevMonth").onclick=()=>{monthPicker.value=shiftMonth(monthPicker.value,-1);render();};
+document.getElementById("nextMonth").onclick=()=>{monthPicker.value=shiftMonth(monthPicker.value,1);render();};
+</script>
 </body>
 </html>

@@ -4,72 +4,75 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Add Transaction | BudgetBuddy</title>
+  <script>
+      /* pre-paint theme: avoids dark/light flash, global dark mode */
+      try{(function(){var s={theme:"system"};try{s=Object.assign(s,JSON.parse(localStorage.getItem("bb_settings"))||{})}catch(e){}var t=s.theme;if(t==="system"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}document.documentElement.setAttribute("data-theme",t)})()}catch(e){}
+    </script>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<div class="app-shell">
+  <div id="sidebar-root"></div>
 
-  <header>
-    <img src="assets/logo.png" alt="BudgetBuddy" class="logo">
-    <nav>
-      <ul class="nav-links">
-        <li><a href="index.html">Home</a></li>
-        <li><a href="add.html" class="active">Add</a></li>
-        <li><a href="history.html">History</a></li>
-        <li><a href="stats.html">Stats</a></li>
-        <li><a href="settings.html">Settings</a></li>
-      </ul>
-    </nav>
-  </header>
+  <div class="main-area">
+    <div class="topbar">
+      <button class="icon-btn" id="menuBtn" title="Show / hide sidebar">☰</button>
+      <div>
+        <h2>Add Transaction</h2>
+        <div class="sub">Quick entry</div>
+      </div>
+    </div>
 
-  <main>
-    <section class="form-section">
-      <h2>Add Transaction</h2>
-      <form id="addForm">
-        <input type="text" id="title" placeholder="Description" required>
-        <input type="number" id="amount" placeholder="Amount" step="0.01" required>
-        <select id="type" required>
-          <option value="income">Income</option>
-          <option value="expense">Expense</option>
-        </select>
-        <button type="submit">Add Transaction</button>
-      </form>
-    </section>
-  </main>
+    <div class="content">
+      <div class="panel" style="max-width:560px">
+        <form id="addForm" style="display:grid;gap:10px">
+          <input type="text" id="title" placeholder="Description" required>
+          <input type="number" id="amount" placeholder="Amount" step="0.01" min="0" required>
+          <select id="type" required>
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+          </select>
+          <select id="category" data-cats aria-label="Category"></select>
+          <input type="date" id="date">
+          <button type="submit" class="btn">Add Transaction</button>
+        </form>
+      </div>
+    </div>
 
-  <footer>
-    <p>© 2025 BudgetBuddy</p>
-  </footer>
+    <footer>© 2025 BudgetBuddy</footer>
+  </div>
+</div>
 
-  <script src="js/storage.js"></script>
-  <script>
-    const form = document.getElementById("addForm");
+<script src="js/monthly.js"></script>
+<script src="js/layout.js"></script>
+<script>
+  const form = document.getElementById("addForm");
+  const dateInput = document.getElementById("date");
+  dateInput.value = new Date().toISOString().split("T")[0];
 
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const title = document.getElementById("title").value.trim();
-      const amount = parseFloat(document.getElementById("amount").value);
-      const type = document.getElementById("type").value;
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const title = document.getElementById("title").value.trim();
+    const amount = parseFloat(document.getElementById("amount").value);
+    const type = document.getElementById("type").value;
+    const category = document.getElementById("category").value;
+    const date = dateInput.value || new Date().toISOString().split("T")[0];
 
-      if (!title || isNaN(amount)) {
-        alert("Please enter valid data.");
-        return;
-      }
+    if (!title || isNaN(amount)) {
+      alert("Please enter valid data.");
+      return;
+    }
 
-      const newTransaction = {
-        id: Date.now(),
-        title,
-        amount,
-        type,
-        date: new Date().toISOString().split("T")[0],
-      };
+    const newTransaction = { id: Date.now(), title, description: title, amount, type, category, date };
 
-      const transactions = JSON.parse(localStorage.getItem("transactions")) || [];
-      transactions.push(newTransaction);
-      localStorage.setItem("transactions", JSON.stringify(transactions));
+    const transactions = JSON.parse(localStorage.getItem("transactions")) || [];
+    transactions.push(newTransaction);
+    localStorage.setItem("transactions", JSON.stringify(transactions));
 
-      alert("Transaction added successfully!");
-      form.reset();
-    });
-  </script>
+    alert("Transaction added successfully!");
+    form.reset();
+    dateInput.value = new Date().toISOString().split("T")[0];
+  });
+</script>
 </body>
 </html>

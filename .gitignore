@@ -1,0 +1,16 @@
+# OS / editor junk
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Dependencies / build output (none required today, kept for safety)
+node_modules/
+dist/
+coverage/
+
+# Logs & temp
+*.log
+*.tmp
+.opencode/
